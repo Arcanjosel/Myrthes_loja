@@ -1,20 +1,24 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QKeySequence, QShortcut, QFont
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QTextEdit,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
 )
 
+from app.config.settings import UI_TABLE_ROW_HEIGHT, UI_FONT_SIZE_PT
 from app.controllers.client_controller import ClientController
+from app.events.bus import bus
 from app.models.client import Client
+from app.utils.icons_manager import IconManager
+from app.views.components.client_dialog import ClientDialog
 
 
 class ClientsView(QWidget):
@@ -22,73 +26,51 @@ class ClientsView(QWidget):
         super().__init__()
         self._controller = controller
 
-        # Formulário
-        self._name = QLineEdit()
-        self._phone = QLineEdit()
-        self._phone.setInputMask("(00) 00000-0000;_")
-        self._notes = QTextEdit()
-        self._btn_save = QPushButton("Salvar cliente")
-        self._btn_new = QPushButton("Limpar")
-
-        form = QVBoxLayout()
-        form.addWidget(QLabel("Nome:"))
-        form.addWidget(self._name)
-        form.addWidget(QLabel("Telefone:"))
-        form.addWidget(self._phone)
-        form.addWidget(QLabel("Observações:"))
-        form.addWidget(self._notes)
-
-        btns = QHBoxLayout()
-        btns.addWidget(self._btn_save)
-        btns.addWidget(self._btn_new)
-        btns.addStretch(1)
-        form.addLayout(btns)
-
-        # Busca e lista
+        # Barra de ações em linha
+        self._btn_new = QPushButton(IconManager.get_icon("adicionar"), "Novo Cliente")
         self._search = QLineEdit()
         self._search.setPlaceholderText("Buscar por nome ou telefone...")
-        self._btn_search = QPushButton("Buscar")
+        self._btn_search = QPushButton(IconManager.get_icon("buscar"), "Buscar")
+
+        actions = QHBoxLayout()
+        actions.addWidget(self._btn_new)
+        actions.addStretch(1)
+        actions.addWidget(self._search)
+        actions.addWidget(self._btn_search)
+
+        # Tabela
         self._table = QTableWidget(0, 3)
         self._table.setHorizontalHeaderLabels(["Nome", "Telefone", "Observações"])
         self._table.setSelectionBehavior(self._table.SelectionBehavior.SelectRows)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.horizontalHeader().setStretchLastSection(True)
-
-        search_row = QHBoxLayout()
-        search_row.addWidget(self._search)
-        search_row.addWidget(self._btn_search)
+        header_font = QFont()
+        header_font.setPointSize(UI_FONT_SIZE_PT + 1)
+        self._table.horizontalHeader().setFont(header_font)
 
         layout = QVBoxLayout(self)
-        layout.addLayout(form)
-        layout.addWidget(QLabel("Clientes cadastrados"))
-        layout.addLayout(search_row)
+        layout.addLayout(actions)
         layout.addWidget(self._table)
         self.setLayout(layout)
 
-        self._btn_save.clicked.connect(self._on_save)
-        self._btn_new.clicked.connect(self._on_new)
+        self._btn_new.clicked.connect(self._on_new_client)
         self._btn_search.clicked.connect(self._on_search)
         self._search.textChanged.connect(self._on_search)
-        self._table.itemSelectionChanged.connect(self._on_table_selection)
+
+        # Atalhos
+        QShortcut(QKeySequence("Ctrl+N"), self, self._on_new_client)
+        QShortcut(QKeySequence("Ctrl+F"), self, lambda: self._search.setFocus())
 
         self._reload()
 
-    def _on_save(self) -> None:
-        name = self._name.text().strip()
-        if not name:
+    def _on_new_client(self) -> None:
+        dlg = ClientDialog(self)
+        if dlg.exec() != dlg.DialogCode.Accepted:
             return
-        phone = self._phone.text().strip()
-        notes = self._notes.toPlainText().strip()
-        self._controller.upsert(name, phone, notes)
-        self._on_new()
+        name, phone, notes = dlg.values()
+        self._controller.upsert(name, phone or "", notes or "")
+        bus.client_list_changed.emit()
         self._reload()
-
-    def _on_new(self) -> None:
-        self._name.clear()
-        self._phone.clear()
-        self._notes.clear()
-        self._name.setFocus()
-        self._table.clearSelection()
 
     def _on_search(self) -> None:
         query = self._search.text()
@@ -104,15 +86,5 @@ class ClientsView(QWidget):
             self._table.setItem(r, 0, QTableWidgetItem(c.name))
             self._table.setItem(r, 1, QTableWidgetItem(c.phone or "-"))
             self._table.setItem(r, 2, QTableWidgetItem(c.notes or "-"))
-            self._table.item(r, 0).setData(Qt.ItemDataRole.UserRole, c)
+            self._table.setRowHeight(r, UI_TABLE_ROW_HEIGHT)
         self._table.resizeColumnsToContents()
-
-    def _on_table_selection(self) -> None:
-        rows = self._table.selectionModel().selectedRows()
-        if not rows:
-            return
-        row = rows[0].row()
-        c: Client = self._table.item(row, 0).data(Qt.ItemDataRole.UserRole)
-        self._name.setText(c.name)
-        self._phone.setText(c.phone or "")
-        self._notes.setText(c.notes or "")

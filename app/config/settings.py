@@ -18,3 +18,9 @@ THERMAL_PRINTER_PRODUCT_ID = None  # ex.: 0x0e15
 THERMAL_PRINTER_SERIAL_PORT = None  # ex.: 'COM3'
 THERMAL_PRINTER_BAUDRATE = 9600
 THERMAL_PRINTER_HOST = None
+
+# Aparência (UI)
+UI_FONT_FAMILY = "Segoe UI"  # ou "Arial"
+UI_FONT_SIZE_PT = 12  # tamanho base da fonte em pontos
+UI_TABLE_ROW_HEIGHT = 28
+UI_HEADER_FONT_DELTA = 1  # header um pouco maior

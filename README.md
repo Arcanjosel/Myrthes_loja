@@ -22,13 +22,13 @@ pip install -r requirements.txt
 
 ## Configuração do Firebase
 1. Crie um projeto no Firebase e gere a chave JSON de uma conta de serviço com acesso ao Firestore.
-2. Baixe o arquivo e salve-o na raiz do projeto como `firebase_credentials.json` (ou use outro caminho).
-3. Defina a variável de ambiente `FIREBASE_CREDENTIALS` ou crie um arquivo `.env` com:
+2. Salve o arquivo na raiz do projeto como `myrthes.json` (recomendado). O app detecta automaticamente.
+3. Alternativamente, defina a variável de ambiente `FIREBASE_CREDENTIALS` ou crie um arquivo `.env` com:
 ```
-FIREBASE_CREDENTIALS=firebase_credentials.json
+FIREBASE_CREDENTIALS=./myrthes.json
 ```
 
-Opcional: Se não houver credenciais, o app funciona em modo offline com dados em memória (útil para testes iniciais).
+Sem credenciais válidas, o app roda em modo offline (útil para testes).
 
 ## Executando
 ```powershell

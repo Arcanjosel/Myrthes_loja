@@ -17,6 +17,8 @@ def main() -> int:
 
     sync = SyncManager(firestore_client)
     sync.start()
+    # expõe para a janela poder abrir o diálogo de sync reutilizando a thread
+    setattr(MainWindow, "_sync_manager", sync)
 
     service_controller = ServiceController(repository)
 

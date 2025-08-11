@@ -26,3 +26,11 @@ class OrdersController:
 
     def get_order_with_items(self, order_id: str):
         return self._repository.get_order_with_items(order_id)
+
+    # --------- Pagamentos / Caixa ---------
+    def add_payment(self, order_id: str, amount_cents: int, method: str | None = None, note: str | None = None) -> None:
+        self._repository.add_payment(order_id, int(amount_cents), method, note)
+
+    def cash_closing_sum_for_date(self, date_iso: str) -> int:
+        """Retorna soma de pagamentos em uma data para fechamento de caixa (centavos)."""
+        return self._repository.cash_sum_for_date(date_iso)

@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (
     QFormLayout,
     QSpinBox,
 )
+from app.views.components.dialog_theme import apply_dialog_theme, DialogHeader
 
 from app.controllers.service_controller import ServiceController
 from app.models.order import OrderItem
@@ -16,6 +17,8 @@ class ServiceItemDialog(QDialog):
     def __init__(self, parent, service_controller: ServiceController):
         super().__init__(parent)
         self.setWindowTitle("Adicionar serviço ao pedido")
+        self.setModal(True)
+        self.setMinimumWidth(420)
         self._svc_ctrl = service_controller
         self._services = self._svc_ctrl.list_services()
 
@@ -34,10 +37,17 @@ class ServiceItemDialog(QDialog):
         form.addRow("Quantidade:", self._qty)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        ok_btn = buttons.button(QDialogButtonBox.StandardButton.Ok)
+        ok_btn.setDefault(True)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         form.addRow(buttons)
-        self.setLayout(form)
+        from PyQt6.QtWidgets import QVBoxLayout
+        root = QVBoxLayout(self)
+        root.addWidget(DialogHeader("Adicionar serviço", "Selecione um serviço e a quantidade para incluir no pedido."))
+        root.addLayout(form)
+        self.setLayout(root)
+        apply_dialog_theme(self, min_width=440)
 
     def result_item(self) -> OrderItem | None:
         idx = self._combo.currentIndex()

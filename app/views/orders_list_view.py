@@ -26,13 +26,7 @@ from app.controllers.service_controller import ServiceController
 from app.utils.icons_manager import IconManager
 from app.views.components.order_dialog import OrderDialog
 from app.views.components.qr_barcode_utils import generate_qr_png, generate_barcode_png
-from app.config.settings import (
-    THERMAL_PRINTER_VENDOR_ID,
-    THERMAL_PRINTER_PRODUCT_ID,
-    THERMAL_PRINTER_SERIAL_PORT,
-    THERMAL_PRINTER_BAUDRATE,
-    THERMAL_PRINTER_HOST,
-)
+from app.config import settings as app_settings
 
 
 class OrdersListView(QWidget):
@@ -158,11 +152,13 @@ class OrdersListView(QWidget):
 
         try:
             from app.views.components.thermal_printer import ThermalPrinter
+            vid = getattr(app_settings, "THERMAL_PRINTER_VENDOR_ID", None)
+            pid = getattr(app_settings, "THERMAL_PRINTER_PRODUCT_ID", None)
             printer = ThermalPrinter(
-                usb=(THERMAL_PRINTER_VENDOR_ID, THERMAL_PRINTER_PRODUCT_ID) if THERMAL_PRINTER_VENDOR_ID and THERMAL_PRINTER_PRODUCT_ID else None,
-                serial_port=THERMAL_PRINTER_SERIAL_PORT,
-                host=THERMAL_PRINTER_HOST,
-                baudrate=THERMAL_PRINTER_BAUDRATE,
+                usb=(vid, pid) if vid and pid else None,
+                serial_port=getattr(app_settings, "THERMAL_PRINTER_SERIAL_PORT", None),
+                host=getattr(app_settings, "THERMAL_PRINTER_HOST", None),
+                baudrate=int(getattr(app_settings, "THERMAL_PRINTER_BAUDRATE", 9600)),
             )
             if printer.available():
                 printer.print_text("\n".join(lines) + "\n\n")

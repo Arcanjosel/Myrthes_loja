@@ -120,6 +120,13 @@ class FirebaseRepository:
         sqldb.enqueue_sync("order", "upsert", json.dumps(payload))
         return saved
 
+    # --------- Pagamentos / Caixa ---------
+    def add_payment(self, order_id: str, amount_cents: int, method: str | None = None, note: str | None = None) -> None:
+        sqldb.add_payment(order_id, int(amount_cents), method, note)
+
+    def cash_sum_for_date(self, date_iso: str) -> int:
+        return sqldb.cash_sum_for_date(date_iso)
+
     def update_order_status(self, order_id: str, status: str, delivered_at_iso: Optional[str]) -> None:
         sqldb.update_order_status(order_id, status, delivered_at_iso)
         payload = {"id": order_id, "status": status, "delivered_at_iso": delivered_at_iso}

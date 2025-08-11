@@ -54,6 +54,20 @@ class SyncManager:
             if ok:
                 delete_sync_item(item_id)
 
+    # API pública para forçar flush manual (usada no diálogo de sincronização)
+    def flush_now(self) -> int:
+        """Força envio imediato da fila. Retorna quantos itens foram enviados com sucesso."""
+        sent = 0
+        batch = read_sync_batch(500)
+        if not batch:
+            return 0
+        for item_id, entity, action, payload in batch:
+            ok = self._apply_remote(entity, action, payload)
+            if ok:
+                delete_sync_item(item_id)
+                sent += 1
+        return sent
+
     def _apply_remote(self, entity: str, action: str, payload: str) -> bool:
         try:
             data = json.loads(payload)

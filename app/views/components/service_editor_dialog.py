@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout, QLabel
+from app.views.components.dialog_theme import apply_dialog_theme, DialogHeader
 
 from app.models.service import Service
 
@@ -10,6 +11,8 @@ class ServiceEditorDialog(QDialog):
     def __init__(self, parent, service: Service):
         super().__init__(parent)
         self.setWindowTitle("Editar preço do serviço")
+        self.setModal(True)
+        self.setMinimumWidth(380)
         self._service = service
 
         self._price_input = QDoubleSpinBox(self)
@@ -26,11 +29,18 @@ class ServiceEditorDialog(QDialog):
         form.addRow("Preço:", self._price_input)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        ok_btn = buttons.button(QDialogButtonBox.StandardButton.Ok)
+        ok_btn.setDefault(True)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
 
         form.addRow(buttons)
-        self.setLayout(form)
+        from PyQt6.QtWidgets import QVBoxLayout
+        root = QVBoxLayout(self)
+        root.addWidget(DialogHeader("Editar preço", "Ajuste o preço do serviço selecionado."))
+        root.addLayout(form)
+        self.setLayout(root)
+        apply_dialog_theme(self, min_width=420)
 
     def new_price_cents(self) -> int:
         return int(round(self._price_input.value() * 100))

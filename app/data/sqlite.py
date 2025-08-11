@@ -92,6 +92,20 @@ def init_db() -> None:
             )
             """
         )
+        # Pagamentos (registro simples de entradas)
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS payments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_id TEXT NOT NULL,
+                amount_cents INTEGER NOT NULL,
+                method TEXT,
+                note TEXT,
+                created_at_iso TEXT NOT NULL,
+                FOREIGN KEY(order_id) REFERENCES orders(id)
+            )
+            """
+        )
         # Estoque básico
         cur.execute(
             """
@@ -397,3 +411,30 @@ def upsert_inventory_item(item_id: str, name: str, unit: str, quantity: int) -> 
 def adjust_inventory(item_id: str, delta: int) -> None:
     with get_conn() as conn:
         conn.execute("UPDATE inventory SET quantity = quantity + ? WHERE id = ?", (int(delta), item_id))
+
+
+# ---------- Pagamentos / Caixa ----------
+
+def add_payment(order_id: str, amount_cents: int, method: str | None = None, note: str | None = None, created_at_iso: str | None = None) -> None:
+    """Registra uma entrada de pagamento para um pedido."""
+    from datetime import datetime, timezone
+
+    created = created_at_iso or datetime.now(timezone.utc).isoformat()
+    with get_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO payments (order_id, amount_cents, method, note, created_at_iso)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (order_id, int(amount_cents), method, note, created),
+        )
+
+
+def cash_sum_for_date(date_iso: str) -> int:
+    """Total recebido em uma data (YYYY-MM-DD) somando amount_cents dos pagamentos nessa data (UTC)."""
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT COALESCE(SUM(amount_cents), 0) FROM payments WHERE substr(created_at_iso, 1, 10) = ?",
+            (date_iso,),
+        ).fetchone()
+        return int(row[0]) if row and row[0] is not None else 0

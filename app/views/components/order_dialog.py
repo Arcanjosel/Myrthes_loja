@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
     QVBoxLayout,
 )
+from app.views.components.dialog_theme import apply_dialog_theme, DialogHeader
 
 from app.controllers.client_controller import ClientController
 from app.controllers.orders_controller import OrdersController
@@ -32,6 +33,8 @@ class OrderDialog(QDialog):
     def __init__(self, parent, clients: ClientController, services: ServiceController, orders: OrdersController):
         super().__init__(parent)
         self.setWindowTitle("Novo Pedido")
+        self.setModal(True)
+        self.resize(820, 560)
         self._clients = clients
         self._services = services
         self._orders = orders
@@ -68,20 +71,42 @@ class OrderDialog(QDialog):
         btns_items.addStretch(1)
 
         vbox = QVBoxLayout(self)
+        vbox.addWidget(DialogHeader("Novo Pedido", "Escolha o cliente, defina prazo, itens e condição de pagamento."))
         vbox.addLayout(form_top)
         vbox.addLayout(btns_items)
         vbox.addWidget(self._table)
 
-        self._buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        vbox.addWidget(self._buttons)
+        self._lbl_total = QLabel("Total: R$ 0,00")
+        bottom_bar = QHBoxLayout()
+        bottom_bar.addWidget(self._lbl_total)
+        bottom_bar.addStretch(1)
 
-        self._buttons.accepted.connect(self.accept)
+        self._buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        ok_btn = self._buttons.button(QDialogButtonBox.StandardButton.Ok)
+        ok_btn.setDefault(True)
+        ok_btn.setEnabled(False)
+        bottom_bar.addWidget(self._buttons)
+        vbox.addLayout(bottom_bar)
+
+        self._buttons.accepted.connect(self._on_accept)
         self._buttons.rejected.connect(self.reject)
         self._btn_add_item.clicked.connect(self._on_add_item)
         self._btn_remove_item.clicked.connect(self._on_remove_item)
         self._client_search.textChanged.connect(self._reload_clients)
+        self._table.itemChanged.connect(self._recompute_total)
 
         self._reload_clients()
+        self._recompute_total()
+        apply_dialog_theme(self, min_width=820)
+
+    def _on_accept(self) -> None:
+        if not self.selected_client_id():
+            self._client_combo.setFocus()
+            return
+        if not self.selected_items():
+            self._btn_add_item.setFocus()
+            return
+        self.accept()
 
     def _reload_clients(self) -> None:
         q = self._client_search.text().strip()
@@ -103,11 +128,13 @@ class OrderDialog(QDialog):
                 self._table.setItem(r, 3, QTableWidgetItem(str(item.quantity)))
                 self._table.setItem(r, 4, QTableWidgetItem(f"{(item.unit_price_cents*item.quantity)/100:.2f}"))
                 self._table.item(r, 0).setData(Qt.ItemDataRole.UserRole, item)
+                self._recompute_total()
 
     def _on_remove_item(self) -> None:
         rows = self._table.selectionModel().selectedRows()
         for m in sorted(rows, key=lambda x: x.row(), reverse=True):
             self._table.removeRow(m.row())
+        self._recompute_total()
 
     def selected_items(self) -> list[OrderItem]:
         items: list[OrderItem] = []
@@ -135,3 +162,17 @@ class OrderDialog(QDialog):
 
     def should_print(self) -> bool:
         return self._print_after.isChecked()
+
+    # --- UX helpers ---
+    def _recompute_total(self) -> None:
+        total = 0.0
+        for r in range(self._table.rowCount()):
+            try:
+                qty = int(self._table.item(r, 3).text())
+                price = float(self._table.item(r, 4).text().replace(",", "."))
+                total += price
+            except Exception:
+                pass
+        self._lbl_total.setText(f"Total: R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        ok_btn = self._buttons.button(QDialogButtonBox.StandardButton.Ok)
+        ok_btn.setEnabled(self._client_combo.count() > 0 and self._table.rowCount() > 0)

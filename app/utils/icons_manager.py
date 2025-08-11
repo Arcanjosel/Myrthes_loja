@@ -21,6 +21,7 @@ class IconManager:
         "toggle": OutlineIcon.SWITCH,
         "sair": OutlineIcon.LOGOUT,
         "lista": OutlineIcon.LIST,
+        "config": OutlineIcon.SETTINGS,
     }
 
     @classmethod

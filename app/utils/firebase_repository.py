@@ -161,11 +161,14 @@ class FirebaseRepository:
         return sqldb.count_sync_queue()
 
     # --------- Analytics ---------
-    def top_services_by_revenue(self, limit: int = 10):
-        return sqldb.top_services_by_revenue(limit)
+    def top_services_by_revenue(self, limit: int = 10, last_n_days: int | None = None):
+        return sqldb.top_services_by_revenue(limit, last_n_days)
 
-    def bottom_services_by_revenue(self, limit: int = 10):
-        return sqldb.bottom_services_by_revenue(limit)
+    def bottom_services_by_revenue(self, limit: int = 10, last_n_days: int | None = None):
+        return sqldb.bottom_services_by_revenue(limit, last_n_days)
 
     def revenue_by_day(self, last_n_days: int = 30):
         return sqldb.revenue_by_day(last_n_days)
+
+    def summary_since(self, last_n_days: int = 30):
+        return sqldb.summary_since(last_n_days)

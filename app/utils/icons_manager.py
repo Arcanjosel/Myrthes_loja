@@ -23,6 +23,8 @@ class IconManager:
         "lista": OutlineIcon.LIST,
         "config": OutlineIcon.SETTINGS,
         "dashboard": OutlineIcon.CHART_BAR,
+        "ok": OutlineIcon.CHECK,
+        "x": OutlineIcon.X,
     }
 
     @classmethod

@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
     QMessageBox,
     QCheckBox,
+    QHeaderView,
 )
 
 from app.config.settings import UI_TABLE_ROW_HEIGHT, UI_FONT_SIZE_PT
@@ -49,15 +50,17 @@ class ServicesView(QWidget):
         self._table.setHorizontalHeaderLabels(["Serviço", "Tipo", "Subtipo", "Preço", "Ativo"])
         self._table.setSelectionBehavior(self._table.SelectionBehavior.SelectRows)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self._table.horizontalHeader().setStretchLastSection(True)
+        # Por padrão, todas as colunas esticam
+        header = self._table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         header_font = QFont()
         header_font.setPointSize(UI_FONT_SIZE_PT + 1)
-        self._table.horizontalHeader().setFont(header_font)
-        # Larguras fixas/ mínimas para colunas curtas
-        self._table.setColumnWidth(1, 120)  # Tipo
-        self._table.setColumnWidth(2, 140)  # Subtipo
-        self._table.setColumnWidth(3, 100)  # Preço
-        self._table.setColumnWidth(4, 60)   # Ativo
+        header.setFont(header_font)
+        # Apenas Preço (3) e Ativo (4) com largura fixa
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
+        self._table.setColumnWidth(3, 180)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
+        self._table.setColumnWidth(4, 90)
 
         layout = QVBoxLayout(self)
         layout.addLayout(top_bar)
@@ -89,11 +92,20 @@ class ServicesView(QWidget):
             self._table.setItem(row, 0, QTableWidgetItem(svc.name))
             self._table.setItem(row, 1, QTableWidgetItem(svc.type))
             self._table.setItem(row, 2, QTableWidgetItem(svc.subtype or "-"))
-            self._table.setItem(row, 3, QTableWidgetItem(self._format_brl(svc.price_cents)))
-            self._table.setItem(row, 4, QTableWidgetItem("Sim" if svc.active else "Não"))
+            # Preço fixo (alinhado à direita), Ativo com ícone
+            price_item = QTableWidgetItem(self._format_brl(svc.price_cents))
+            price_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            self._table.setItem(row, 3, price_item)
+            active_item = QTableWidgetItem()
+            active_item.setIcon(IconManager.get_icon("ok" if svc.active else "x"))
+            active_item.setText("")
+            active_item.setToolTip("Ativo" if svc.active else "Inativo")
+            self._table.setItem(row, 4, active_item)
             self._table.setRowHeight(row, UI_TABLE_ROW_HEIGHT)
             self._table.item(row, 0).setData(Qt.ItemDataRole.UserRole, svc)
-        self._table.resizeColumnsToContents()
+        # Ajusta somente colunas de texto amplas; mantém Preço/Ativo fixos
+        for col in (0, 1, 2):
+            self._table.resizeColumnToContents(col)
 
     def _selected_service(self) -> Optional[Service]:
         rows = self._table.selectionModel().selectedRows()

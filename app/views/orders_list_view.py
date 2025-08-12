@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem,
     QMessageBox,
     QDateEdit,
+    QHeaderView,
 )
 
 from app.config.settings import UI_TABLE_ROW_HEIGHT, UI_FONT_SIZE_PT
@@ -62,16 +63,18 @@ class OrdersListView(QWidget):
         self._table.setHorizontalHeaderLabels(["Código", "Cliente", "Status", "Total (R$)", "Prazo", "ID"])
         self._table.setSelectionBehavior(self._table.SelectionBehavior.SelectRows)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self._table.horizontalHeader().setStretchLastSection(True)
+        tbl_header = self._table.horizontalHeader()
+        tbl_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self._table.setSelectionMode(self._table.SelectionMode.ExtendedSelection)
         header_font = QFont()
         header_font.setPointSize(UI_FONT_SIZE_PT + 1)
         self._table.horizontalHeader().setFont(header_font)
-        # Larguras fixas para colunas pequenas
-        self._table.setColumnWidth(0, 120)  # Código
-        self._table.setColumnWidth(2, 90)   # Status
+        # Apenas Total e Prazo fixos; demais esticam
+        tbl_header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
         self._table.setColumnWidth(3, 110)  # Total
+        tbl_header.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)
         self._table.setColumnWidth(4, 110)  # Prazo
+        tbl_header.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
         self._table.setColumnWidth(5, 1)    # ID (oculta depois)
 
         # Barra inferior com ações do dia e entrega

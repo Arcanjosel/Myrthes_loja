@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QKeySequence
 from PyQt6.QtWidgets import QLabel, QMainWindow, QStatusBar, QTabWidget, QWidget, QVBoxLayout
 
@@ -55,7 +55,6 @@ class MainWindow(QMainWindow):
             ("clientes", "Clientes", "Ctrl+Shift+C", lambda: self._tabs.setCurrentWidget(self._tab_clients)),
             ("servicos", "Serviços", "Ctrl+Shift+S", lambda: self._tabs.setCurrentWidget(self._tab_services)),
             ("config", "Configurações", "Ctrl+,", self._open_settings_dialog),
-            ("refresh", "Sincronizar agora", "Ctrl+Shift+R", self._open_sync_dialog),
             ("toggle", "Alternar tema", "Ctrl+T", self._toggle_theme),
             ("dashboard", "Dashboard", "Ctrl+D", lambda: self._tabs.setCurrentWidget(self._tab_dashboard)),
         ]
@@ -84,25 +83,16 @@ class MainWindow(QMainWindow):
 
     def _build_status_bar(self) -> None:
         sb = QStatusBar(self)
-        self._sync_label = QLabel("Sincronização: 0 pendências")
         status = f"{APP_NAME} | Tel: {PHONE} | CNPJ: {CNPJ}"
         label = QLabel(status)
         label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         sb.addWidget(label)
-        sb.addPermanentWidget(self._sync_label)
         self.setStatusBar(sb)
-
-        timer = QTimer(self)
-        timer.timeout.connect(self._update_sync_count)
-        timer.start(5000)
-        self._update_sync_count()
+        
 
     def _update_sync_count(self) -> None:
-        try:
-            n = self._repository.count_sync_queue()
-            self._sync_label.setText(f"Sincronização: {n} pendências")
-        except Exception:
-            self._sync_label.setText("Sincronização: -")
+        # Sem sincronização (modo offline)
+        pass
 
     def _build_menu(self) -> None:
         menu_file = self.menuBar().addMenu("Arquivo")
@@ -142,10 +132,7 @@ class MainWindow(QMainWindow):
         act_settings.setShortcut(QKeySequence("Ctrl+,"))
         act_settings.triggered.connect(self._open_settings_dialog)
         menu_settings.addAction(act_settings)
-        act_sync = QAction(IconManager.get_icon("refresh"), "Sincronizar agora…", self)
-        act_sync.setShortcut(QKeySequence("Ctrl+Shift+R"))
-        act_sync.triggered.connect(self._open_sync_dialog)
-        menu_settings.addAction(act_sync)
+        # Removido: ação de sincronização
 
     def _open_settings_dialog(self) -> None:
         dlg = SettingsDialog(self)
@@ -155,16 +142,8 @@ class MainWindow(QMainWindow):
             self.setWindowTitle(WINDOW_TITLE)
 
     def _open_sync_dialog(self) -> None:
-        from app.config import firebase_config
-        from app.utils.sync_manager import SyncManager
-
-        # Reusa o SyncManager já em execução, se existir
-        # self._sync_manager é criado em main.py, então garantimos atributo
-        sync_mgr = getattr(self, "_sync_manager", None)
-        if not isinstance(sync_mgr, SyncManager):
-            sync_mgr = None
-        dlg = SyncDialog(self, sync_mgr or SyncManager(firebase_config.get_firestore_client()))
-        dlg.exec()
+        # Removido: sem sincronização online
+        pass
 
     def _toggle_theme(self) -> None:
         new_theme = toggle_app_theme()

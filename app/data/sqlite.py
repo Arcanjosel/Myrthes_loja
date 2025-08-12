@@ -423,34 +423,65 @@ def adjust_inventory(item_id: str, delta: int) -> None:
 
 # ---------- Analytics / Relatórios ----------
 
-def top_services_by_revenue(limit: int = 10) -> List[Tuple[str, str, str, int]]:
-    """Retorna (service_name, service_type, service_subtype, total_cents) ordenado por receita desc."""
+def top_services_by_revenue(limit: int = 10, last_n_days: int | None = None) -> List[Tuple[str, str, str, int]]:
+    """Retorna (service_name, service_type, service_subtype, total_cents) ordenado por receita desc.
+
+    Se last_n_days for informado, considera apenas pedidos dentro do período.
+    """
     with get_conn() as conn:
-        rows = conn.execute(
-            """
-            SELECT service_name, service_type, COALESCE(service_subtype,''), SUM(unit_price_cents * quantity) AS total
-            FROM order_items
-            GROUP BY service_name, service_type, service_subtype
-            ORDER BY total DESC
-            LIMIT ?
-            """,
-            (limit,),
-        ).fetchall()
+        if last_n_days is None:
+            rows = conn.execute(
+                """
+                SELECT service_name, service_type, COALESCE(service_subtype,''), SUM(unit_price_cents * quantity) AS total
+                FROM order_items
+                GROUP BY service_name, service_type, service_subtype
+                ORDER BY total DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT oi.service_name, oi.service_type, COALESCE(oi.service_subtype,''), SUM(oi.unit_price_cents * oi.quantity) AS total
+                FROM order_items oi
+                JOIN orders o ON o.id = oi.order_id
+                WHERE substr(o.created_at_iso,1,10) >= date('now', ?)
+                GROUP BY oi.service_name, oi.service_type, oi.service_subtype
+                ORDER BY total DESC
+                LIMIT ?
+                """,
+                (f'-{int(last_n_days)} day', limit),
+            ).fetchall()
         return [(r[0], r[1], r[2], int(r[3])) for r in rows]
 
 
-def bottom_services_by_revenue(limit: int = 10) -> List[Tuple[str, str, str, int]]:
+def bottom_services_by_revenue(limit: int = 10, last_n_days: int | None = None) -> List[Tuple[str, str, str, int]]:
     with get_conn() as conn:
-        rows = conn.execute(
-            """
-            SELECT service_name, service_type, COALESCE(service_subtype,''), SUM(unit_price_cents * quantity) AS total
-            FROM order_items
-            GROUP BY service_name, service_type, service_subtype
-            ORDER BY total ASC
-            LIMIT ?
-            """,
-            (limit,),
-        ).fetchall()
+        if last_n_days is None:
+            rows = conn.execute(
+                """
+                SELECT service_name, service_type, COALESCE(service_subtype,''), SUM(unit_price_cents * quantity) AS total
+                FROM order_items
+                GROUP BY service_name, service_type, service_subtype
+                ORDER BY total ASC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT oi.service_name, oi.service_type, COALESCE(oi.service_subtype,''), SUM(oi.unit_price_cents * oi.quantity) AS total
+                FROM order_items oi
+                JOIN orders o ON o.id = oi.order_id
+                WHERE substr(o.created_at_iso,1,10) >= date('now', ?)
+                GROUP BY oi.service_name, oi.service_type, oi.service_subtype
+                ORDER BY total ASC
+                LIMIT ?
+                """,
+                (f'-{int(last_n_days)} day', limit),
+            ).fetchall()
         return [(r[0], r[1], r[2], int(r[3])) for r in rows]
 
 
@@ -467,6 +498,23 @@ def revenue_by_day(last_n_days: int = 30) -> List[Tuple[str, int]]:
             (last_n_days,),
         ).fetchall()
         return [(r[0], int(r[1])) for r in rows]
+
+
+def summary_since(last_n_days: int = 30) -> Tuple[int, int, float]:
+    """Retorna (num_pedidos, total_cents, avg_ticket) no período."""
+    with get_conn() as conn:
+        row = conn.execute(
+            """
+            SELECT COUNT(*), COALESCE(SUM(total_cents),0)
+            FROM orders
+            WHERE substr(created_at_iso,1,10) >= date('now', ?)
+            """,
+            (f'-{int(last_n_days)} day',),
+        ).fetchone()
+        count = int(row[0]) if row else 0
+        total = int(row[1]) if row else 0
+        avg = (total / count) if count else 0.0
+        return count, total, avg
 
 
 # ---------- Pagamentos / Caixa ----------

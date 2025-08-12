@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List, Tuple
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QGroupBox, QGridLayout
 
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -22,15 +22,29 @@ class DashboardView(QWidget):
 
         # Ações de topo
         actions = QHBoxLayout()
+        self._range = QComboBox()
+        self._range.addItems(["Últimos 7 dias", "Últimos 30 dias", "Últimos 90 dias", "Tudo"])
         btn_refresh = QPushButton("Atualizar")
         btn_export = QPushButton("Exportar Relatório")
         btn_refresh.clicked.connect(self.reload)
         btn_export.clicked.connect(self._export_report)
         actions.addWidget(QLabel("Dashboard — Receitas e Serviços"))
+        actions.addWidget(self._range)
         actions.addStretch(1)
         actions.addWidget(btn_refresh)
         actions.addWidget(btn_export)
         layout.addLayout(actions)
+
+        # Cards resumidos
+        gb = QGroupBox("Resumo")
+        grid = QGridLayout(gb)
+        self._lbl_orders = QLabel("Pedidos: 0")
+        self._lbl_total = QLabel("Total: R$ 0,00")
+        self._lbl_avg = QLabel("Ticket médio: R$ 0,00")
+        grid.addWidget(self._lbl_orders, 0, 0)
+        grid.addWidget(self._lbl_total, 0, 1)
+        grid.addWidget(self._lbl_avg, 0, 2)
+        layout.addWidget(gb)
 
         # Gráfico Top serviços
         self._fig_top = Figure(figsize=(7.2, 3.2))
@@ -54,12 +68,24 @@ class DashboardView(QWidget):
         self.reload()
 
     def reload(self) -> None:
+        self._update_summary()
         self._draw_top()
         self._draw_bottom()
         self._draw_days()
 
+    def _selected_days(self) -> int | None:
+        idx = self._range.currentIndex()
+        return {0: 7, 1: 30, 2: 90}.get(idx, None)
+
+    def _update_summary(self) -> None:
+        days = self._selected_days() or 30
+        count, total, avg = self._repo.summary_since(days)
+        self._lbl_orders.setText(f"Pedidos: {count}")
+        self._lbl_total.setText(f"Total: R$ {total/100:.2f}")
+        self._lbl_avg.setText(f"Ticket médio: R$ {avg/100:.2f}")
+
     def _draw_top(self) -> None:
-        data = self._repo.top_services_by_revenue(8)
+        data = self._repo.top_services_by_revenue(8, self._selected_days())
         labels = [f"{n} ({t}/{s or '-'})" for n, t, s, _ in data]
         values = [c / 100.0 for _, _, _, c in data]
         self._fig_top.clear()
@@ -74,7 +100,7 @@ class DashboardView(QWidget):
         self._canvas_top.draw()
 
     def _draw_bottom(self) -> None:
-        data = self._repo.bottom_services_by_revenue(8)
+        data = self._repo.bottom_services_by_revenue(8, self._selected_days())
         labels = [f"{n} ({t}/{s or '-'})" for n, t, s, _ in data]
         values = [c / 100.0 for _, _, _, c in data]
         self._fig_bottom.clear()
@@ -88,7 +114,8 @@ class DashboardView(QWidget):
         self._canvas_bottom.draw()
 
     def _draw_days(self) -> None:
-        data = list(reversed(self._repo.revenue_by_day(30)))
+        days = self._selected_days() or 30
+        data = list(reversed(self._repo.revenue_by_day(days)))
         labels = [d for d, _ in data]
         values = [c / 100.0 for _, c in data]
         self._fig_days.clear()

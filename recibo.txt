@@ -1,0 +1,12 @@
+Myrthes Costuras — Recibo de Pedido
+Cliente: Maria — (16) 98823-1222
+
+- Barra (Original) x3 — R$ 105.00
+- Pence (pence) x3 — R$ 90.00
+-
+Total: R$ 195.00
+
+Código do Pedido: MC-250811-b1521cbb
+QR: C:\Users\jeanc\AppData\Local\Temp\tmpdcde3dsk.png
+Barcode: C:\Users\jeanc\AppData\Local\Temp\tmpfqlgdz6u.png
+(Use um app de QR/código de barras no celular para identificar o pedido)

@@ -43,12 +43,14 @@ class ClientsView(QWidget):
         self._table.setHorizontalHeaderLabels(["Nome", "Telefone", "Observações"])
         self._table.setSelectionBehavior(self._table.SelectionBehavior.SelectRows)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self._table.horizontalHeader().setStretchLastSection(True)
+        header = self._table.horizontalHeader()
+        header.setSectionResizeMode(self._table.horizontalHeader().ResizeMode.Stretch)
         header_font = QFont()
         header_font.setPointSize(UI_FONT_SIZE_PT + 1)
-        self._table.horizontalHeader().setFont(header_font)
-        # Larguras mínimas para campos curtos
-        self._table.setColumnWidth(1, 120)  # Telefone
+        header.setFont(header_font)
+        # Apenas Telefone fixo; demais esticam
+        header.setSectionResizeMode(1, header.ResizeMode.Fixed)
+        self._table.setColumnWidth(1, 120)
 
         layout = QVBoxLayout(self)
         layout.addLayout(actions)

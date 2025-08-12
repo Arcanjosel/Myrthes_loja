@@ -47,6 +47,8 @@ class ClientsView(QWidget):
         header_font = QFont()
         header_font.setPointSize(UI_FONT_SIZE_PT + 1)
         self._table.horizontalHeader().setFont(header_font)
+        # Larguras mínimas para campos curtos
+        self._table.setColumnWidth(1, 120)  # Telefone
 
         layout = QVBoxLayout(self)
         layout.addLayout(actions)

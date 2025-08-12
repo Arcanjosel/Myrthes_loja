@@ -53,6 +53,11 @@ class ServicesView(QWidget):
         header_font = QFont()
         header_font.setPointSize(UI_FONT_SIZE_PT + 1)
         self._table.horizontalHeader().setFont(header_font)
+        # Larguras fixas/ mínimas para colunas curtas
+        self._table.setColumnWidth(1, 120)  # Tipo
+        self._table.setColumnWidth(2, 140)  # Subtipo
+        self._table.setColumnWidth(3, 100)  # Preço
+        self._table.setColumnWidth(4, 60)   # Ativo
 
         layout = QVBoxLayout(self)
         layout.addLayout(top_bar)

@@ -23,6 +23,10 @@ class InventoryView(QWidget):
         self._table = QTableWidget(0, 4)
         self._table.setHorizontalHeaderLabels(["ID", "Nome", "Unidade", "Quantidade"])
         self._table.horizontalHeader().setStretchLastSection(True)
+        # Larguras para campos fixos
+        self._table.setColumnWidth(0, 160)  # ID
+        self._table.setColumnWidth(2, 90)   # Unidade
+        self._table.setColumnWidth(3, 110)  # Quantidade
 
         self._id = QLineEdit()
         self._name = QLineEdit()

@@ -12,9 +12,11 @@ from app.utils.firebase_repository import FirebaseRepository
 from app.views.clients_view import ClientsView
 from app.views.services_view import ServicesView
 from app.views.orders_list_view import OrdersListView
+from app.views.dashboard_view import DashboardView
 from app.utils.icons_manager import IconManager
 from app.views.components.settings_dialog import SettingsDialog
 from app.views.components.sync_dialog import SyncDialog
+from app.views.components.dialog_theme import toggle_app_theme, set_app_theme, apply_app_font
 from app.views.components.header_bar import HeaderBar
 
 
@@ -34,15 +36,18 @@ class MainWindow(QMainWindow):
         self.resize(1100, 760)
 
         self._tabs = QTabWidget(self)
+        apply_app_font(self._tabs)
         self._tab_clients = ClientsView(self._client_controller)
         self._tab_services = ServicesView(self._service_controller)
         self._tab_orders_list = OrdersListView(
             self._orders_controller, self._client_controller, self._service_controller
         )
+        self._tab_dashboard = DashboardView(self._repository)
 
-        self._tabs.addTab(self._tab_orders_list, "Pedidos")
-        self._tabs.addTab(self._tab_clients, "Clientes")
-        self._tabs.addTab(self._tab_services, "Serviços")
+        self._tabs.addTab(self._tab_orders_list, IconManager.get_icon("lista"), "Pedidos")
+        self._tabs.addTab(self._tab_clients, IconManager.get_icon("clientes"), "Clientes")
+        self._tabs.addTab(self._tab_services, IconManager.get_icon("servicos"), "Serviços")
+        self._tabs.addTab(self._tab_dashboard, IconManager.get_icon("dashboard"), "Dashboard")
 
         # Header com logo + ações
         header_actions = [
@@ -50,6 +55,9 @@ class MainWindow(QMainWindow):
             ("clientes", "Clientes", "Ctrl+Shift+C", lambda: self._tabs.setCurrentWidget(self._tab_clients)),
             ("servicos", "Serviços", "Ctrl+Shift+S", lambda: self._tabs.setCurrentWidget(self._tab_services)),
             ("config", "Configurações", "Ctrl+,", self._open_settings_dialog),
+            ("refresh", "Sincronizar agora", "Ctrl+Shift+R", self._open_sync_dialog),
+            ("toggle", "Alternar tema", "Ctrl+T", self._toggle_theme),
+            ("dashboard", "Dashboard", "Ctrl+D", lambda: self._tabs.setCurrentWidget(self._tab_dashboard)),
         ]
         header = HeaderBar(WINDOW_TITLE, header_actions, self)
         header.setObjectName("HeaderBar")
@@ -61,7 +69,15 @@ class MainWindow(QMainWindow):
         vbox.setSpacing(0)
         vbox.addWidget(header)
         vbox.addWidget(self._tabs)
+        # aplica fonte base a toda a janela (inclui tabelas internas)
+        apply_app_font(self)
         self.setCentralWidget(central)
+        # aplica tema atual na abertura
+        try:
+            from app.config import settings as app_settings
+            set_app_theme(str(app_settings.get_settings().get("UI_THEME") or "system"))
+        except Exception:
+            pass
 
         self._build_status_bar()
         self._build_menu()
@@ -115,6 +131,10 @@ class MainWindow(QMainWindow):
         act_services.setShortcut(QKeySequence("Ctrl+Shift+S"))
         act_services.triggered.connect(lambda: self._tabs.setCurrentWidget(self._tab_services))
         menu_nav.addAction(act_services)
+        act_dash = QAction(IconManager.get_icon("dashboard"), "Dashboard", self)
+        act_dash.setShortcut(QKeySequence("Ctrl+D"))
+        act_dash.triggered.connect(lambda: self._tabs.setCurrentWidget(self._tab_dashboard))
+        menu_nav.addAction(act_dash)
 
         # Configurações
         menu_settings = self.menuBar().addMenu("Configurações")
@@ -145,3 +165,11 @@ class MainWindow(QMainWindow):
             sync_mgr = None
         dlg = SyncDialog(self, sync_mgr or SyncManager(firebase_config.get_firestore_client()))
         dlg.exec()
+
+    def _toggle_theme(self) -> None:
+        new_theme = toggle_app_theme()
+        # opcional: feedback rápido no status bar
+        try:
+            self.statusBar().showMessage(f"Tema: {new_theme}", 2000)
+        except Exception:
+            pass

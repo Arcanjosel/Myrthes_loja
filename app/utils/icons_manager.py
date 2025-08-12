@@ -22,6 +22,7 @@ class IconManager:
         "sair": OutlineIcon.LOGOUT,
         "lista": OutlineIcon.LIST,
         "config": OutlineIcon.SETTINGS,
+        "dashboard": OutlineIcon.CHART_BAR,
     }
 
     @classmethod

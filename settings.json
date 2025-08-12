@@ -1,0 +1,19 @@
+{
+  "APP_NAME": "Myrthes Costuras",
+  "COMPANY_NAME": "Mirtes Eliane Oliveira Costa",
+  "CNPJ": "42.275.758/0001-82",
+  "STATE_REGISTRATION_SP": "797.744.619.116",
+  "PHONE": "(16) 98854-7350",
+  "DB_PATH": "myrthes.db",
+  "THERMAL_PRINTER_VENDOR_ID": null,
+  "THERMAL_PRINTER_PRODUCT_ID": null,
+  "THERMAL_PRINTER_SERIAL_PORT": null,
+  "THERMAL_PRINTER_BAUDRATE": 9600,
+  "THERMAL_PRINTER_HOST": null,
+  "UI_FONT_FAMILY": "Segoe UI",
+  "UI_FONT_SIZE_PT": 12,
+  "UI_TABLE_ROW_HEIGHT": 28,
+  "UI_HEADER_FONT_DELTA": 1,
+  "UI_THEME": "system",
+  "FIREBASE_CREDENTIALS": null
+}

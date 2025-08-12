@@ -63,10 +63,16 @@ class OrdersListView(QWidget):
         self._table.setSelectionBehavior(self._table.SelectionBehavior.SelectRows)
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.horizontalHeader().setStretchLastSection(True)
-        self._table.setSelectionMode(self._table.SelectionMode.SingleSelection)
+        self._table.setSelectionMode(self._table.SelectionMode.ExtendedSelection)
         header_font = QFont()
         header_font.setPointSize(UI_FONT_SIZE_PT + 1)
         self._table.horizontalHeader().setFont(header_font)
+        # Larguras fixas para colunas pequenas
+        self._table.setColumnWidth(0, 120)  # Código
+        self._table.setColumnWidth(2, 90)   # Status
+        self._table.setColumnWidth(3, 110)  # Total
+        self._table.setColumnWidth(4, 110)  # Prazo
+        self._table.setColumnWidth(5, 1)    # ID (oculta depois)
 
         # Barra inferior com ações do dia e entrega
         self._closing_date = QDateEdit()
@@ -74,6 +80,7 @@ class OrdersListView(QWidget):
         self._closing_date.setDate(date.today())
         self._btn_cash_close = QPushButton("Fechar Caixa do Dia")
         self._btn_mark_delivered = QPushButton(IconManager.get_icon("adicionar"), "Marcar entregue")
+        self._btn_delete = QPushButton(IconManager.get_icon("excluir"), "Remover Pedido")
 
         bottom_bar = QHBoxLayout()
         bottom_bar.addWidget(QLabel("Data:"))
@@ -81,6 +88,7 @@ class OrdersListView(QWidget):
         bottom_bar.addWidget(self._btn_cash_close)
         bottom_bar.addStretch(1)
         bottom_bar.addWidget(self._btn_mark_delivered)
+        bottom_bar.addWidget(self._btn_delete)
 
         layout = QVBoxLayout(self)
         layout.addLayout(header)
@@ -96,9 +104,11 @@ class OrdersListView(QWidget):
         self._btn_mark_delivered.clicked.connect(self._mark_delivered)
         self._btn_cash_close.clicked.connect(self._on_cash_close)
         self._table.itemSelectionChanged.connect(self._on_selection_changed)
+        self._btn_delete.clicked.connect(self._on_delete)
 
         # Atalhos (evita conflito do Ctrl+N com o menu)
         QShortcut(QKeySequence("Ctrl+D"), self, self._mark_delivered)
+        QShortcut(QKeySequence("Delete"), self, self._on_delete)
         QShortcut(QKeySequence("Return"), self, self._reload)
 
         self._reload()
@@ -181,6 +191,31 @@ class OrdersListView(QWidget):
         total_cents = self._orders_ctrl.cash_closing_sum_for_date(date_iso)
         QMessageBox.information(self, "Fechamento de Caixa", f"Data: {date_iso}\nTotal recebido: R$ {total_cents/100:.2f}")
 
+    def _on_delete(self) -> None:
+        rows = self._table.selectionModel().selectedRows()
+        if not rows:
+            QMessageBox.information(self, "Pedidos", "Selecione um ou mais pedidos na tabela.")
+            return
+        count = len(rows)
+        ret = QMessageBox.question(
+            self,
+            "Remover Pedido",
+            f"Tem certeza que deseja remover {count} pedido(s)? Esta ação não pode ser desfeita.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if ret != QMessageBox.StandardButton.Yes:
+            return
+        for m in rows:
+            row = m.row()
+            item = self._table.item(row, 5)
+            oid = item.data(Qt.ItemDataRole.UserRole) if item else None
+            if not oid and item:
+                oid = item.text()
+            if oid:
+                self._orders_ctrl.delete_order(str(oid))
+        self._reload()
+
     def _reload(self) -> None:
         status = self._status.currentText()
         q_client = self._q_client.text().strip()
@@ -223,3 +258,4 @@ class OrdersListView(QWidget):
     def _on_selection_changed(self) -> None:
         has_sel = bool(self._table.selectionModel().selectedRows())
         self._btn_mark_delivered.setEnabled(has_sel)
+        self._btn_delete.setEnabled(has_sel)

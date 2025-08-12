@@ -38,7 +38,8 @@ class SyncManager:
 
     def _loop(self) -> None:
         while not self._stop_event.is_set():
-            if self._db and is_online():
+            # Modo offline: não envia nada para a nuvem
+            if False:
                 try:
                     self._flush_once()
                 except Exception:

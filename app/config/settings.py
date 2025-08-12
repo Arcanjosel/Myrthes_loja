@@ -24,6 +24,7 @@ _DEFAULTS: Dict[str, Any] = {
     "UI_FONT_SIZE_PT": 12,
     "UI_TABLE_ROW_HEIGHT": 28,
     "UI_HEADER_FONT_DELTA": 1,
+    "UI_THEME": "system",  # system | dark
     # Sincronização / Credenciais Firebase (opcional override)
     "FIREBASE_CREDENTIALS": None,
 }

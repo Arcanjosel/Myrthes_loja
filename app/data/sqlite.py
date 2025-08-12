@@ -293,6 +293,14 @@ def update_order_status(order_id: str, status: str, delivered_at_iso: Optional[s
         )
 
 
+def delete_order(order_id: str) -> None:
+    """Remove pedido, itens e pagamentos relacionados."""
+    with get_conn() as conn:
+        conn.execute("DELETE FROM order_items WHERE order_id = ?", (order_id,))
+        conn.execute("DELETE FROM payments WHERE order_id = ?", (order_id,))
+        conn.execute("DELETE FROM orders WHERE id = ?", (order_id,))
+
+
 def list_orders(status: Optional[str] = None, client_query: Optional[str] = None, order_code_query: Optional[str] = None) -> List[Tuple[str, str, str, str, int, Optional[str]]]:
     """Retorna lista de pedidos: (id, order_code, client_name, status, total_cents, due_date_iso)."""
     where = []
@@ -411,6 +419,54 @@ def upsert_inventory_item(item_id: str, name: str, unit: str, quantity: int) -> 
 def adjust_inventory(item_id: str, delta: int) -> None:
     with get_conn() as conn:
         conn.execute("UPDATE inventory SET quantity = quantity + ? WHERE id = ?", (int(delta), item_id))
+
+
+# ---------- Analytics / Relatórios ----------
+
+def top_services_by_revenue(limit: int = 10) -> List[Tuple[str, str, str, int]]:
+    """Retorna (service_name, service_type, service_subtype, total_cents) ordenado por receita desc."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT service_name, service_type, COALESCE(service_subtype,''), SUM(unit_price_cents * quantity) AS total
+            FROM order_items
+            GROUP BY service_name, service_type, service_subtype
+            ORDER BY total DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        return [(r[0], r[1], r[2], int(r[3])) for r in rows]
+
+
+def bottom_services_by_revenue(limit: int = 10) -> List[Tuple[str, str, str, int]]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT service_name, service_type, COALESCE(service_subtype,''), SUM(unit_price_cents * quantity) AS total
+            FROM order_items
+            GROUP BY service_name, service_type, service_subtype
+            ORDER BY total ASC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        return [(r[0], r[1], r[2], int(r[3])) for r in rows]
+
+
+def revenue_by_day(last_n_days: int = 30) -> List[Tuple[str, int]]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT substr(created_at_iso,1,10) AS day, SUM(total_cents) AS total
+            FROM orders
+            GROUP BY day
+            ORDER BY day DESC
+            LIMIT ?
+            """,
+            (last_n_days,),
+        ).fetchall()
+        return [(r[0], int(r[1])) for r in rows]
 
 
 # ---------- Pagamentos / Caixa ----------

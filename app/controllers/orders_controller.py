@@ -34,3 +34,7 @@ class OrdersController:
     def cash_closing_sum_for_date(self, date_iso: str) -> int:
         """Retorna soma de pagamentos em uma data para fechamento de caixa (centavos)."""
         return self._repository.cash_sum_for_date(date_iso)
+
+    # --------- Remoção ---------
+    def delete_order(self, order_id: str) -> None:
+        self._repository.delete_order(order_id)

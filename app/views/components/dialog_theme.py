@@ -4,7 +4,8 @@ from typing import Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QDialog, QLayout, QWidget, QVBoxLayout, QLabel
+from PyQt6.QtWidgets import QDialog, QLayout, QWidget, QVBoxLayout, QLabel, QApplication
+from app.config import settings as app_settings
 
 
 PRIMARY_COLOR = "#007065"
@@ -22,6 +23,17 @@ def apply_dialog_theme(dialog: QDialog, min_width: int = 520, content_margins: t
     dialog.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
     dialog.setModal(True)
     dialog.setMinimumWidth(min_width)
+
+    # Fonte base de acordo com as configurações (aplicada ao diálogo e filhos)
+    try:
+        values = app_settings.get_settings()
+        font_family = str(values.get("UI_FONT_FAMILY") or "Segoe UI")
+        font_size = int(values.get("UI_FONT_SIZE_PT") or 12)
+    except Exception:
+        font_family = "Segoe UI"
+        font_size = 12
+    base_font = QFont(font_family, pointSize=font_size)
+    dialog.setFont(base_font)
 
     # Estilo visual
     dialog.setStyleSheet(
@@ -67,13 +79,85 @@ class DialogHeader(QWidget):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(14, 12, 14, 12)
         lay.setSpacing(4)
+        # Fonte base do sistema/tema
+        try:
+            values = app_settings.get_settings()
+            font_family = str(values.get("UI_FONT_FAMILY") or "Segoe UI")
+            font_size = int(values.get("UI_FONT_SIZE_PT") or 12)
+        except Exception:
+            font_family = "Segoe UI"
+            font_size = 12
+
         lbl_title = QLabel(title, self)
         lbl_title.setObjectName("Title")
+        f_title = QFont(font_family, pointSize=font_size + 2)
+        f_title.setBold(True)
+        lbl_title.setFont(f_title)
         lbl_desc = QLabel(description or "", self)
         lbl_desc.setObjectName("Desc")
+        f_desc = QFont(font_family, pointSize=font_size)
+        lbl_desc.setFont(f_desc)
         lbl_desc.setWordWrap(True)
         lay.addWidget(lbl_title)
         if description:
             lay.addWidget(lbl_desc)
+
+
+# -------- Tema global --------
+
+_LIGHT_CSS = """
+QMainWindow, QWidget { background-color: #f2f5f7; color: #2c3e50; }
+QMenuBar, QMenu { background-color: #eef2f4; color: #2c3e50; }
+QStatusBar { background-color: #eef2f4; }
+QTabWidget::pane { border-top: 1px solid #cfd8dc; }
+QToolButton { color: #2c3e50; }
+"""
+
+_DARK_CSS = """
+QMainWindow, QWidget { background-color: #202a2e; color: #e6eef2; }
+QMenuBar, QMenu { background-color: #263238; color: #e6eef2; }
+QStatusBar { background-color: #263238; color: #e6eef2; }
+QTabWidget::pane { border-top: 1px solid #37474f; }
+QToolButton { color: #e6eef2; }
+"""
+
+
+def set_app_theme(theme: str) -> None:
+    app = QApplication.instance()
+    if not app:
+        return
+    normalized = (theme or "system").lower()
+    if normalized == "system":
+        # Não aplica stylesheet global; mantém aparência nativa
+        app.setStyleSheet("")
+        return
+    css = _LIGHT_CSS if normalized == "light" else _DARK_CSS
+    app.setStyleSheet(css)
+
+
+def toggle_app_theme() -> str:
+    current = (app_settings.get_settings().get("UI_THEME") or "system").lower()
+    new_theme = "dark" if current != "dark" else "system"
+    values = app_settings.get_settings()
+    values["UI_THEME"] = new_theme
+    app_settings.save_settings(values)
+    set_app_theme(new_theme)
+    return new_theme
+
+
+# -------- Fonte global (para MainWindow / Abas / Tabelas) --------
+
+def get_base_font() -> QFont:
+    try:
+        values = app_settings.get_settings()
+        family = str(values.get("UI_FONT_FAMILY") or "Segoe UI")
+        size = int(values.get("UI_FONT_SIZE_PT") or 12)
+    except Exception:
+        family, size = "Segoe UI", 12
+    return QFont(family, pointSize=size)
+
+
+def apply_app_font(widget: QWidget) -> None:
+    widget.setFont(get_base_font())
 
 

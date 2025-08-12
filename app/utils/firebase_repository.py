@@ -16,7 +16,8 @@ class FirebaseRepository:
     """
 
     def __init__(self, firestore_client) -> None:
-        self._db = firestore_client
+        # Cliente Firestore é ignorado em modo offline
+        self._db = None
         sqldb.init_db()
 
     # --------- Serviços ---------
@@ -39,7 +40,6 @@ class FirebaseRepository:
                     active=True,
                 )
                 sqldb.upsert_service(local)
-                sqldb.enqueue_sync("service", "upsert", json.dumps(local.__dict__))
 
     def list_services(self, include_inactive: bool = False) -> List[Service]:
         return sqldb.list_services(include_inactive=include_inactive)
@@ -138,6 +138,10 @@ class FirebaseRepository:
     def get_order_with_items(self, order_id: str):
         return sqldb.get_order_with_items(order_id)
 
+    def delete_order(self, order_id: str) -> None:
+        # Remove local e deixa uma marca de remoção opcionalmente no remoto (não implementado)
+        sqldb.delete_order(order_id)
+
     # --------- Estoque ---------
     def list_inventory(self) -> List[Tuple[str, str, str, int]]:
         return sqldb.list_inventory()
@@ -155,3 +159,13 @@ class FirebaseRepository:
     # --------- Sync ---------
     def count_sync_queue(self) -> int:
         return sqldb.count_sync_queue()
+
+    # --------- Analytics ---------
+    def top_services_by_revenue(self, limit: int = 10):
+        return sqldb.top_services_by_revenue(limit)
+
+    def bottom_services_by_revenue(self, limit: int = 10):
+        return sqldb.bottom_services_by_revenue(limit)
+
+    def revenue_by_day(self, last_n_days: int = 30):
+        return sqldb.revenue_by_day(last_n_days)

@@ -30,29 +30,23 @@ class SyncDialog(QDialog):
         layout.addWidget(DialogHeader("Sincronização", "Informe o JSON de credenciais e envie a fila de atualizações ao Firebase."))
 
         info = QLabel(
-            "Informe o caminho do arquivo de credenciais JSON do Firebase (service account).\n"
-            "Ele será salvo em settings.json, e a sincronização será enviada agora."
+            "Modo offline: os dados são salvos no SQLite local.\n"
+            "Este diálogo permite apenas limpar a fila local de sync caso exista."
         )
         info.setWordWrap(True)
         layout.addWidget(info)
 
         self._cred_path = QLineEdit(self)
-        self._cred_path.setPlaceholderText("ex.: C:/Users/voce/Downloads/credenciais.json")
-        self._cred_path.setText(current_credentials or str(app_settings.get_settings().get("FIREBASE_CREDENTIALS") or ""))
-
+        self._cred_path.setReadOnly(True)
         form = QFormLayout()
-        form.addRow("Credenciais (JSON):", self._cred_path)
         layout.addLayout(form)
 
-        self._buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
-        )
-        self._buttons.accepted.connect(self._on_sync)
+        self._buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         self._buttons.rejected.connect(self.reject)
         layout.addWidget(self._buttons)
 
-        # Atalho visual para enviar sem salvar credenciais
-        self._btn_just_sync = QPushButton("Sincronizar sem salvar caminho", self)
+        # Ações locais
+        self._btn_just_sync = QPushButton("Limpar fila local de sync", self)
         self._btn_just_sync.clicked.connect(self._on_just_sync)
         layout.addWidget(self._btn_just_sync)
 
@@ -60,16 +54,19 @@ class SyncDialog(QDialog):
         apply_dialog_theme(self, min_width=520)
 
     def _on_sync(self) -> None:
-        path = self._cred_path.text().strip()
-        values = app_settings.get_settings()
-        values["FIREBASE_CREDENTIALS"] = path or None
-        app_settings.save_settings(values)
-        sent = self._sync_manager.flush_now()
-        QMessageBox.information(self, "Sincronização", f"Envios aplicados: {sent}")
         self.accept()
 
     def _on_just_sync(self) -> None:
-        sent = self._sync_manager.flush_now()
-        QMessageBox.information(self, "Sincronização", f"Envios aplicados: {sent}")
+        sent = 0
+        try:
+            # Limpa os registros da fila
+            from app.data.sqlite import read_sync_batch, delete_sync_item
+            batch = read_sync_batch(1000)
+            for item_id, *_ in batch:
+                delete_sync_item(item_id)
+            sent = len(batch)
+        except Exception:
+            pass
+        QMessageBox.information(self, "Sincronização", f"Itens removidos da fila local: {sent}")
 
 
